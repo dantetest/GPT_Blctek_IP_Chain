@@ -21,9 +21,10 @@ jobs:
           go-version: '1.22.x'
           cache-dependency-path: apps/api/go.mod
       - run: go mod download
-      - run: gofmt -w $(find . -name '*.go') && git diff --exit-code
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)"
       - run: go vet ./...
-      - run: go test ./...
+      - run: go test -race ./...
 
   web:
     runs-on: ubuntu-latest
