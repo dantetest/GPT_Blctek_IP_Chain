@@ -23,7 +23,20 @@ jobs:
       - run: go mod download
       - name: Check formatting
         run: test -z "$(gofmt -l .)"
-      - run: go vet ./...
+      - name: Run go vet
+        id: vet
+        continue-on-error: true
+        shell: bash
+        run: set -o pipefail; go vet ./... 2>&1 | tee vet.log
+      - name: Upload vet diagnostics
+        if: steps.vet.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-vet-log
+          path: apps/api/vet.log
+      - name: Fail on vet diagnostics
+        if: steps.vet.outcome == 'failure'
+        run: exit 1
       - run: go test -race ./...
 
   web:
