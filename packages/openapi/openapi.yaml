@@ -1,0 +1,20 @@
+openapi: 3.1.0
+info:
+  title: BlctekIP IP-Chain API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /health:
+    get:
+      operationId: getReadiness
+      summary: 检查 API、MySQL 与 Redis 是否可用
+      responses:
+        '200': { description: 服务已就绪 }
+        '503': { description: 依赖服务不可用 }
+  /health/live:
+    get:
+      operationId: getLiveness
+      summary: 检查 API 进程是否存活
+      responses:
+        '200': { description: 服务存活 }
