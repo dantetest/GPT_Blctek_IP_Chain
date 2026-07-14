@@ -22,8 +22,26 @@ jobs:
           cache-dependency-path: |
             apps/api/go.mod
             apps/api/go.sum
-      - name: Verify Go module metadata
-        run: go mod tidy && git diff --exit-code -- go.mod go.sum
+      - name: Resolve Go module metadata
+        id: modules
+        continue-on-error: true
+        shell: bash
+        run: |
+          go mod tidy
+          git diff -- go.mod go.sum | tee module-metadata.diff
+          test ! -s module-metadata.diff
+      - name: Upload module diagnostics
+        if: steps.modules.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-module-diagnostics
+          path: |
+            apps/api/go.mod
+            apps/api/go.sum
+            apps/api/module-metadata.diff
+      - name: Fail on module drift
+        if: steps.modules.outcome == 'failure'
+        run: exit 1
       - name: Check formatting
         run: test -z "$(gofmt -l .)"
       - name: Run go vet
