@@ -26,6 +26,7 @@ func Authenticate(tokens *auth.TokenManager) gin.HandlerFunc {
 		principal.Set(c, principal.Value{
 			UserID:    claims.Subject,
 			SessionID: claims.SessionID,
+			AuthType:  "JWT",
 			Role:      claims.Role,
 			Tier:      claims.Tier,
 		})
