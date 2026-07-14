@@ -27,8 +27,11 @@ func NewCredential() (raw, prefix, hash string, err error) {
 }
 
 func Parse(raw string) (string, error) {
-	parts := strings.Split(raw, "_")
+	parts := strings.SplitN(raw, "_", 3)
 	if len(parts) != 3 || parts[0] != keyPrefix || len(parts[1]) != 12 || len(parts[2]) < 40 {
+		return "", ErrInvalidKey
+	}
+	if _, err := hex.DecodeString(parts[1]); err != nil {
 		return "", ErrInvalidKey
 	}
 	return strings.ToLower(parts[1]), nil
