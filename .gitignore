@@ -1,0 +1,13 @@
+.env
+.env.local
+*.log
+.DS_Store
+.idea/
+.vscode/
+coverage/
+dist/
+bin/
+node_modules/
+.next/
+apps/api/tmp/
+apps/api/coverage.out
