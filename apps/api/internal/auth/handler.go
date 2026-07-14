@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/httpx"
-	appmiddleware "github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/middleware"
+	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/principal"
 	"github.com/gin-gonic/gin"
 )
 
@@ -118,12 +118,12 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 }
 
 func (h *Handler) Me(c *gin.Context) {
-	principal, ok := appmiddleware.CurrentPrincipal(c)
+	current, ok := principal.Get(c)
 	if !ok {
 		httpx.Error(c, http.StatusUnauthorized, "UNAUTHORIZED", "authentication is required")
 		return
 	}
-	user, err := h.service.GetUser(c.Request.Context(), principal.UserID)
+	user, err := h.service.GetUser(c.Request.Context(), current.UserID)
 	if err != nil {
 		h.handleError(c, err)
 		return
