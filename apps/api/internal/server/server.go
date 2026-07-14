@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/apikey"
 	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/auth"
 	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/config"
 	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/health"
+	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/idempotency"
 	appmiddleware "github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -28,6 +30,10 @@ func New(cfg config.Config, logger *slog.Logger, db *sql.DB, cache *redis.Client
 		LoginLockTTL:     cfg.LoginLockTTL,
 	})
 	authHandler := auth.NewHandler(authService)
+	apiKeyRepository := apikey.NewRepository(db)
+	apiKeyService := apikey.NewService(apiKeyRepository)
+	apiKeyHandler := apikey.NewHandler(apiKeyService)
+	idempotencyStore := idempotency.NewStore(db)
 
 	api := router.Group("/api/v1")
 	api.GET("/health/live", healthHandler.Live)
@@ -43,6 +49,15 @@ func New(cfg config.Config, logger *slog.Logger, db *sql.DB, cache *redis.Client
 	protected := api.Group("")
 	protected.Use(appmiddleware.Authenticate(tokenManager))
 	protected.GET("/me", authHandler.Me)
+
+	apiKeyRoutes := protected.Group("/api-keys")
+	apiKeyRoutes.GET("", apiKeyHandler.List)
+	apiKeyRoutes.POST("", idempotency.Require(idempotencyStore, 24*time.Hour), apiKeyHandler.Create)
+	apiKeyRoutes.DELETE("/:id", apiKeyHandler.Revoke)
+
+	agentRoutes := api.Group("/agent")
+	agentRoutes.Use(appmiddleware.AuthenticateAPIKey(apiKeyService))
+	agentRoutes.GET("/context", apiKeyHandler.Context)
 
 	return router
 }
