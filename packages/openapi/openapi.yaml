@@ -1,20 +1,129 @@
 openapi: 3.1.0
 info:
-  title: BlctekIP IP-Chain API
-  version: 0.1.0
+  title: BlctekIP API
+  version: 0.2.0
 servers:
   - url: http://localhost:8080/api/v1
 paths:
   /health:
     get:
-      operationId: getReadiness
-      summary: 检查 API、MySQL 与 Redis 是否可用
+      operationId: readiness
       responses:
-        '200': { description: 服务已就绪 }
-        '503': { description: 依赖服务不可用 }
-  /health/live:
+        '200':
+          description: MySQL and Redis are ready
+  /auth/register:
+    post:
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered
+        '409':
+          description: Email already registered
+        '422':
+          description: Password does not meet policy
+  /auth/login:
+    post:
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+        '401':
+          description: Invalid credentials
+        '423':
+          description: Account temporarily locked
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token pair rotated
+  /auth/logout:
+    post:
+      operationId: logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Session revoked
+  /auth/verify-email:
+    post:
+      operationId: verifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Email verified
+  /me:
     get:
-      operationId: getLiveness
-      summary: 检查 API 进程是否存活
+      operationId: currentUser
+      security:
+        - bearerAuth: []
       responses:
-        '200': { description: 服务存活 }
+        '200':
+          description: Current user
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+        display_name:
+          type: string
+          maxLength: 120
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
