@@ -6,17 +6,9 @@ import (
 
 	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/auth"
 	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/httpx"
+	"github.com/dantetest/GPT_Blctek_IP_Chain/apps/api/internal/principal"
 	"github.com/gin-gonic/gin"
 )
-
-const principalKey = "principal"
-
-type Principal struct {
-	UserID    string
-	SessionID string
-	Role      string
-	Tier      string
-}
 
 func Authenticate(tokens *auth.TokenManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -31,7 +23,7 @@ func Authenticate(tokens *auth.TokenManager) gin.HandlerFunc {
 			httpx.Error(c, http.StatusUnauthorized, "INVALID_ACCESS_TOKEN", "access token is invalid or expired")
 			return
 		}
-		c.Set(principalKey, Principal{
+		principal.Set(c, principal.Value{
 			UserID:    claims.Subject,
 			SessionID: claims.SessionID,
 			Role:      claims.Role,
@@ -47,24 +39,15 @@ func RequireRoles(roles ...string) gin.HandlerFunc {
 		allowed[role] = struct{}{}
 	}
 	return func(c *gin.Context) {
-		principal, ok := CurrentPrincipal(c)
+		current, ok := principal.Get(c)
 		if !ok {
 			httpx.Error(c, http.StatusUnauthorized, "UNAUTHORIZED", "authentication is required")
 			return
 		}
-		if _, ok := allowed[principal.Role]; !ok {
+		if _, ok := allowed[current.Role]; !ok {
 			httpx.Error(c, http.StatusForbidden, "FORBIDDEN", "insufficient permissions")
 			return
 		}
 		c.Next()
 	}
-}
-
-func CurrentPrincipal(c *gin.Context) (Principal, bool) {
-	value, exists := c.Get(principalKey)
-	if !exists {
-		return Principal{}, false
-	}
-	principal, ok := value.(Principal)
-	return principal, ok
 }
